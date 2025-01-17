@@ -4241,7 +4241,7 @@ riscv_gdbarch_init (struct gdbarch_info info,
   /* We do support running binaries compiled for 32-bit float on targets
      with 64-bit float, so we only complain if the binary requires more
      than the target has available.  */
-  if (abi_features.flen > features.flen)
+  if (features.flen != 0 && abi_features.flen > features.flen)
     error (_("bfd requires flen %d, but target has flen %d"),
 	    abi_features.flen, features.flen);
 
