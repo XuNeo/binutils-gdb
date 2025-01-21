@@ -10547,6 +10547,12 @@ elfcore_grok_arm_vfp (bfd *abfd, Elf_Internal_Note *note)
 }
 
 static bool
+elfcore_grok_arm_m_system (bfd *abfd, Elf_Internal_Note *note)
+{
+  return elfcore_make_note_pseudosection (abfd, ".reg-arm-m-system", note);
+}
+
+static bool
 elfcore_grok_aarch_tls (bfd *abfd, Elf_Internal_Note *note)
 {
   return elfcore_make_note_pseudosection (abfd, ".reg-aarch-tls", note);
@@ -11274,6 +11280,13 @@ elfcore_grok_note (bfd *abfd, Elf_Internal_Note *note)
       if (note->namesz == 6
 	  && strcmp (note->namedata, "LINUX") == 0)
 	return elfcore_grok_arm_vfp (abfd, note);
+      else
+	return true;
+
+    case NT_ARM_M_SYS:
+      if (note->namesz == 6
+	  && strcmp (note->namedata, "LINUX") == 0)
+	return elfcore_grok_arm_m_system (abfd, note);
       else
 	return true;
 
@@ -12881,6 +12894,18 @@ elfcore_write_arm_vfp (bfd *abfd,
 }
 
 char *
+elfcore_write_arm_m_system (bfd *abfd,
+		       char *buf,
+		       int *bufsiz,
+		       const void *arm_m_sys,
+		       int size)
+{
+  char *note_name = "LINUX";
+  return elfcore_write_note (abfd, buf, bufsiz,
+			     note_name, NT_ARM_M_SYS, arm_m_sys, size);
+}
+
+char *
 elfcore_write_aarch_tls (bfd *abfd,
 		       char *buf,
 		       int *bufsiz,
@@ -13170,6 +13195,8 @@ elfcore_write_register_note (bfd *abfd,
     return elfcore_write_s390_gs_bc (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".reg-arm-vfp") == 0)
     return elfcore_write_arm_vfp (abfd, buf, bufsiz, data, size);
+  if (strcmp (section, ".reg-arm-m-system") == 0)
+    return elfcore_write_arm_m_system (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".reg-aarch-tls") == 0)
     return elfcore_write_aarch_tls (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".reg-aarch-hw-break") == 0)
