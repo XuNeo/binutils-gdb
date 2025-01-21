@@ -138,6 +138,35 @@ arm_none_supply_vfp (const struct regset *regset,
       regcache->raw_supply (regno, regs + (regno - ARM_D0_REGNUM) * 8);
 }
 
+static void
+arm_none_supply_m_system (const struct regset *regset,
+		      struct regcache *regcache,
+		      int regnum, const void *regs_buf, size_t len)
+{
+  struct gdbarch *gdbarch = regcache->arch ();
+  arm_gdbarch_tdep *tdep = gdbarch_tdep<arm_gdbarch_tdep> (gdbarch);
+
+  const gdb_byte *regs = (const gdb_byte *) regs_buf;
+
+  if (regnum == tdep->m_profile_msp_regnum || regnum == -1)
+    regcache->raw_supply (tdep->m_profile_msp_regnum, regs + 0 * 4);
+
+  if (regnum == tdep->m_profile_psp_regnum || regnum == -1)
+    regcache->raw_supply (tdep->m_profile_psp_regnum, regs + 1 * 4);
+
+  if (regnum == tdep->m_profile_msp_ns_regnum || regnum == -1)
+    regcache->raw_supply (tdep->m_profile_msp_ns_regnum, regs + 2 * 4);
+
+  if (regnum == tdep->m_profile_psp_ns_regnum || regnum == -1)
+    regcache->raw_supply (tdep->m_profile_psp_ns_regnum, regs + 3 * 4);
+
+  if (regnum == tdep->m_profile_msp_s_regnum || regnum == -1)
+    regcache->raw_supply (tdep->m_profile_msp_s_regnum, regs + 4 * 4);
+
+  if (regnum == tdep->m_profile_psp_s_regnum || regnum == -1)
+    regcache->raw_supply (tdep->m_profile_psp_s_regnum, regs + 5 * 4);
+}
+
 /* Collect VFP registers from REGCACHE into REGS_BUF.  */
 
 static void
@@ -155,6 +184,36 @@ arm_none_collect_vfp (const struct regset *regset,
       regcache->raw_collect (regno, regs + (regno - ARM_D0_REGNUM) * 8);
 }
 
+static void
+arm_none_collect_m_system (const struct regset *regset,
+			    const struct regcache *regcache,
+			    int regnum, void *regs_buf, size_t len)
+{
+
+  struct gdbarch *gdbarch = regcache->arch ();
+  arm_gdbarch_tdep *tdep = gdbarch_tdep<arm_gdbarch_tdep> (gdbarch);
+
+  gdb_byte *regs = (gdb_byte *) regs_buf;
+
+  if (regnum == tdep->m_profile_msp_regnum || regnum == -1)
+    regcache->raw_collect (tdep->m_profile_msp_regnum, regs + 0 * 4);
+
+  if (regnum == tdep->m_profile_psp_regnum || regnum == -1)
+    regcache->raw_collect (tdep->m_profile_psp_regnum, regs + 1 * 4);
+
+  if (regnum == tdep->m_profile_msp_ns_regnum || regnum == -1)
+    regcache->raw_collect (tdep->m_profile_msp_ns_regnum, regs + 2 * 4);
+
+  if (regnum == tdep->m_profile_psp_ns_regnum || regnum == -1)
+    regcache->raw_collect (tdep->m_profile_psp_ns_regnum, regs + 3 * 4);
+
+  if (regnum == tdep->m_profile_msp_s_regnum || regnum == -1)
+    regcache->raw_collect (tdep->m_profile_msp_s_regnum, regs + 4 * 4);
+
+  if (regnum == tdep->m_profile_psp_s_regnum || regnum == -1)
+    regcache->raw_collect (tdep->m_profile_psp_s_regnum, regs + 5 * 4);
+}
+
 /* The general purpose register set.  */
 
 static const struct regset arm_none_gregset =
@@ -167,6 +226,11 @@ static const struct regset arm_none_gregset =
 static const struct regset arm_none_vfpregset =
   {
     nullptr, arm_none_supply_vfp, arm_none_collect_vfp
+  };
+
+static const struct regset arm_none_m_system_regset =
+  {
+    nullptr, arm_none_supply_m_system, arm_none_collect_m_system
   };
 
 /* Iterate over core file register note sections.  */
@@ -185,6 +249,16 @@ arm_none_iterate_over_regset_sections (struct gdbarch *gdbarch,
   if (tdep->vfp_register_count > 0)
     cb (".reg-arm-vfp", ARM_NONE_SIZEOF_VFP, ARM_NONE_SIZEOF_VFP,
 	&arm_none_vfpregset, "VFP floating-point", cb_data);
+
+  if (tdep->is_m)
+    {
+      int regsize = 2 * 4;
+      if (tdep->have_sec_ext)
+	regsize += 4 * 4;
+
+      cb (".reg-arm-m-system", regsize, regsize,
+	  &arm_none_m_system_regset, "ARM-M sysregs", cb_data);
+    }
 }
 
 /* Initialize ARM bare-metal ABI info.  */

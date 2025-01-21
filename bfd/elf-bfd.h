@@ -1673,7 +1673,7 @@ struct elf_backend_data
      Returns the value to be installed in the ST_SHNDX field of the
      emitted symbol.  If not defined, the value is left unchanged.  */
   unsigned int (*symbol_section_index) (bfd *, elf_symbol_type *);
-  
+
   /* Called when a section has extra reloc sections.  */
   bool (*init_secondary_reloc_section) (bfd *, Elf_Internal_Shdr *,
 					const char *, unsigned int);
@@ -2966,6 +2966,8 @@ extern char *elfcore_write_s390_gs_cb
 extern char *elfcore_write_s390_gs_bc
   (bfd *, char *, int *, const void *, int);
 extern char *elfcore_write_arm_vfp
+  (bfd *, char *, int *, const void *, int);
+extern char *elfcore_write_arm_m_system
   (bfd *, char *, int *, const void *, int);
 extern char *elfcore_write_aarch_tls
   (bfd *, char *, int *, const void *, int);

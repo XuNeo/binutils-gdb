@@ -740,6 +740,8 @@
 					/*   Note: name must be "LINUX".  */
 #define NT_ARM_ZT       0x40d           /* AArch64 SME2 ZT registers.  */
 					/*   Note: name must be "LINUX".  */
+#define NT_ARM_M_SYS    0x40e           /* ARM M system registers.  */
+					/*   Note: name must be "LINUX".  */
 #define NT_ARC_V2	0x600		/* ARC HS accumulator/extra registers.  */
 					/*   note name must be "LINUX".  */
 #define NT_LARCH_CPUCFG 0xa00		/* LoongArch CPU config registers */

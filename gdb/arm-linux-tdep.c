@@ -93,11 +93,11 @@ static const gdb_byte arm_linux_thumb2_be_breakpoint[] = { 0xf7, 0xf0, 0xa0, 0x0
 
 static const gdb_byte arm_linux_thumb2_le_breakpoint[] = { 0xf0, 0xf7, 0x00, 0xa0 };
 
-/* Description of the longjmp buffer.  The buffer is treated as an array of 
+/* Description of the longjmp buffer.  The buffer is treated as an array of
    elements of size ARM_LINUX_JB_ELEMENT_SIZE.
 
    The location of saved registers in this buffer (in particular the PC
-   to use after longjmp is called) varies depending on the ABI (in 
+   to use after longjmp is called) varies depending on the ABI (in
    particular the FP model) and also (possibly) the C Library.  */
 #define ARM_LINUX_JB_ELEMENT_SIZE	ARM_INT_REGISTER_SIZE
 /* For the FPA model the PC is at offset 21 in the buffer.  */
@@ -144,7 +144,7 @@ static const gdb_byte arm_linux_thumb2_le_breakpoint[] = { 0xf0, 0xf7, 0x00, 0xa
    with the real function address.  Subsequent calls go through steps
    1, 2 and 3 and end up calling the real code.
 
-   1) In the code: 
+   1) In the code:
 
    b    function_call
    bl   function_call
@@ -674,6 +674,36 @@ arm_linux_supply_vfp (const struct regset *regset,
       regcache->raw_supply (regno, regs + (regno - ARM_D0_REGNUM) * 8);
 }
 
+
+static void
+arm_linux_supply_m_system (const struct regset *regset,
+		      struct regcache *regcache,
+		      int regnum, const void *regs_buf, size_t len)
+{
+  struct gdbarch *gdbarch = regcache->arch ();
+  arm_gdbarch_tdep *tdep = gdbarch_tdep<arm_gdbarch_tdep> (gdbarch);
+
+  const gdb_byte *regs = (const gdb_byte *) regs_buf;
+
+  if (regnum == tdep->m_profile_msp_regnum || regnum == -1)
+    regcache->raw_supply (tdep->m_profile_msp_regnum, regs + 0 * 4);
+
+  if (regnum == tdep->m_profile_psp_regnum || regnum == -1)
+    regcache->raw_supply (tdep->m_profile_psp_regnum, regs + 1 * 4);
+
+  if (regnum == tdep->m_profile_msp_ns_regnum || regnum == -1)
+    regcache->raw_supply (tdep->m_profile_msp_ns_regnum, regs + 2 * 4);
+
+  if (regnum == tdep->m_profile_psp_ns_regnum || regnum == -1)
+    regcache->raw_supply (tdep->m_profile_psp_ns_regnum, regs + 3 * 4);
+
+  if (regnum == tdep->m_profile_msp_s_regnum || regnum == -1)
+    regcache->raw_supply (tdep->m_profile_msp_s_regnum, regs + 4 * 4);
+
+  if (regnum == tdep->m_profile_psp_s_regnum || regnum == -1)
+    regcache->raw_supply (tdep->m_profile_psp_s_regnum, regs + 5 * 4);
+}
+
 static void
 arm_linux_collect_vfp (const struct regset *regset,
 			 const struct regcache *regcache,
@@ -690,6 +720,36 @@ arm_linux_collect_vfp (const struct regset *regset,
       regcache->raw_collect (regno, regs + (regno - ARM_D0_REGNUM) * 8);
 }
 
+static void
+arm_linux_collect_m_system (const struct regset *regset,
+			    const struct regcache *regcache,
+			    int regnum, void *regs_buf, size_t len)
+{
+
+  struct gdbarch *gdbarch = regcache->arch ();
+  arm_gdbarch_tdep *tdep = gdbarch_tdep<arm_gdbarch_tdep> (gdbarch);
+
+  gdb_byte *regs = (gdb_byte *) regs_buf;
+
+  if (regnum == tdep->m_profile_msp_regnum || regnum == -1)
+    regcache->raw_collect (tdep->m_profile_msp_regnum, regs + 0 * 4);
+
+  if (regnum == tdep->m_profile_psp_regnum || regnum == -1)
+    regcache->raw_collect (tdep->m_profile_psp_regnum, regs + 1 * 4);
+
+  if (regnum == tdep->m_profile_msp_ns_regnum || regnum == -1)
+    regcache->raw_collect (tdep->m_profile_msp_ns_regnum, regs + 2 * 4);
+
+  if (regnum == tdep->m_profile_psp_ns_regnum || regnum == -1)
+    regcache->raw_collect (tdep->m_profile_psp_ns_regnum, regs + 3 * 4);
+
+  if (regnum == tdep->m_profile_msp_s_regnum || regnum == -1)
+    regcache->raw_collect (tdep->m_profile_msp_s_regnum, regs + 4 * 4);
+
+  if (regnum == tdep->m_profile_psp_s_regnum || regnum == -1)
+    regcache->raw_collect (tdep->m_profile_psp_s_regnum, regs + 5 * 4);
+}
+
 static const struct regset arm_linux_gregset =
   {
     NULL, arm_linux_supply_gregset, arm_linux_collect_gregset
@@ -703,6 +763,11 @@ static const struct regset arm_linux_fpregset =
 static const struct regset arm_linux_vfpregset =
   {
     NULL, arm_linux_supply_vfp, arm_linux_collect_vfp
+  };
+
+static const struct regset arm_linux_m_system_regset =
+  {
+    NULL, arm_linux_supply_m_system, arm_linux_collect_m_system
   };
 
 /* Iterate over core file register note sections.  */
@@ -724,6 +789,16 @@ arm_linux_iterate_over_regset_sections (struct gdbarch *gdbarch,
   else if (tdep->have_fpa_registers)
     cb (".reg2", ARM_LINUX_SIZEOF_NWFPE, ARM_LINUX_SIZEOF_NWFPE,
 	&arm_linux_fpregset, "FPA floating-point", cb_data);
+
+  if (tdep->is_m)
+    {
+      int regsize = 2 * 4;
+      if (tdep->have_sec_ext)
+	regsize += 4 * 4;
+
+      cb (".reg-arm-m-system", regsize, regsize,
+	  &arm_linux_m_system_regset, "ARM-M sysregs", cb_data);
+    }
 }
 
 /* Determine target description from core file.  */
@@ -870,7 +945,7 @@ arm_linux_get_syscall_number (struct gdbarch *gdbarch,
     }
   else
     {
-      enum bfd_endian byte_order_for_code = 
+      enum bfd_endian byte_order_for_code =
 	gdbarch_byte_order_for_code (gdbarch);
 
       /* PC gets incremented before the syscall-stop, so read the
@@ -918,9 +993,9 @@ arm_linux_get_next_pcs_syscall_next_pc (struct arm_get_next_pcs *self)
   else
     {
       struct gdbarch *gdbarch = regcache->arch ();
-      enum bfd_endian byte_order_for_code = 
+      enum bfd_endian byte_order_for_code =
 	gdbarch_byte_order_for_code (gdbarch);
-      unsigned long this_instr = 
+      unsigned long this_instr =
 	read_memory_unsigned_integer (pc, 4, byte_order_for_code);
 
       unsigned long svc_operand = (0x00ffffff & this_instr);
